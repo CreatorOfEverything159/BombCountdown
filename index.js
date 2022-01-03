@@ -1,138 +1,127 @@
-const startButton = document.getElementById('start')
-const resetButton = document.getElementById('reset')
-const chain = [
-    ['milliseconds', 999, 3],
-    ['seconds', 59, 2],
-    ['minutes', 59, 2]
-]
+(() => {
 
+    const startButton = document.getElementById('start')
+    const resetButton = document.getElementById('reset')
+    const times = [
+        {type: 'milliseconds', size: 999, max: 3},
+        {type: 'seconds', size: 59, max: 2},
+        {type: 'minutes', size: 59, max: 2}
+    ]
 
+    let arrowListeners = []
+    let countdownInterval = null
+    let isCountdownOn = false
 
-let chain1 = {
-    milliseconds: { min: 3, max: 999 },
-    seconds: { min: 59, max: 2 },
-    minutes: { min: 59, max: 2 }
-}
+    const getNumberValue = type => +document.getElementById(`${type}Value`).innerText
+    const setNumberValue = (type, value) => { document.getElementById(`${type}Value`).innerText = value }
+    const getFormattedValue = (value, length) => {
+        return value.length < length ? `${"0".repeat(length - value.length)}${value}` : value
+    }
 
-Object.keys(chain1).forEach(name => console.log(name))
+    const isCountdownEmpty = () => {
+        for (let i in times) { if (getNumberValue(times[i].type)) { return false } }
+        return true
+    }
 
-let arrowListeners = []
-let lastValue = 0
-let onMouseDownInterval = null
-let countdownInterval = null
-let isCountdownOn = false
+    const increase = (type, max, length) => {
+        let value = getNumberValue(type)
+        setNumberValue(type, getFormattedValue(value === max ? `0` : `${value + 1}`, length))
+    }
+    const decrease = (type, max, length, step = 1) => {
+        const value = getNumberValue(type)
+        if (value === 0) { setNumberValue(type, getFormattedValue(`${max - step + 1}`, length)) }
+        else if (value <= step) { setNumberValue(type, getFormattedValue("0", length)) }
+        else { setNumberValue(type, getFormattedValue(`${value - step}`, length)) }
+    }
 
+    const setArrowListeners = (type, max, length) => {
+        let lastValue = 0
+        let onMouseDownInterval = null
+        const upArrow = document.getElementById(type).getElementsByClassName('up')[0]
+        const downArrow = document.getElementById(type).getElementsByClassName('down')[0]
+        const onIncrease = () => { increase(type, max, length) }
+        const onDecrease = () => { decrease(type, max, length) }
+        const onStart = (callback) => {
+            removeSignal()
+            lastValue = getNumberValue(type)
+            onMouseDownInterval = setInterval(callback, 100)
+        }
+        const onStop = (callback) => {
+            if (onMouseDownInterval) {
+                clearInterval(onMouseDownInterval)
+                onMouseDownInterval = null
+                if (getNumberValue(type) === lastValue) {
+                    removeSignal()
+                    callback()
+                }
+            }
+        }
 
-function getNumberValue(type) {
-    return +document.getElementById(`${type}Value`).innerText
-}
+        arrowListeners.push({ arrow: upArrow, type: 'mousedown', callback: () => { onStart(onIncrease) } })
+        arrowListeners.push({ arrow: upArrow, type: 'mouseup', callback: () => { onStop(onIncrease) } })
+        arrowListeners.push({ arrow: upArrow, type: 'mouseout', callback: () => { onStop(onIncrease) } })
+        arrowListeners.push({ arrow: downArrow, type: 'mousedown', callback: () => { onStart(onDecrease) } })
+        arrowListeners.push({ arrow: downArrow, type: 'mouseup', callback: () => { onStop(onDecrease) } })
+        arrowListeners.push({ arrow: downArrow, type: 'mouseout', callback: () => { onStop(onDecrease) } })
 
-function setNumberValue(type, value) {
-    document.getElementById(`${type}Value`).innerText = value
-}
+        arrowListeners.forEach(listener => { listener.arrow.addEventListener(listener.type, listener.callback) })
+    }
 
-function getFormattedValue(value, length) {
-    return value.length < length ? `${"0".repeat(length - value.length)}${value}` : value
-}
+    const addArrowListeners = () => { times.forEach((e) => { setArrowListeners(e.type, e.size, e.max) }) }
+    const removeArrowListeners = () => {
+        arrowListeners.forEach(listener => { listener.arrow.removeEventListener(listener.type, listener.callback) })
+        arrowListeners = []
+    }
 
-function isCountdownEmpty() {
-    for (let i = 0; i < chain.length; ++i) {
-        if (getNumberValue(chain[i][0])) {
-            return false
+    const stop = () => {
+        addArrowListeners()
+        clearInterval(countdownInterval)
+        startButton.innerText = 'START'
+        isCountdownOn = false
+    }
+    const setSignal = () => {
+        const wrap = document.getElementsByClassName('wrapper')
+        wrap[0].style.color = 'green'
+        startButton.style.color = 'green'
+        resetButton.style.color = 'green'
+    }
+    const removeSignal = () => {
+        const wrap = document.getElementsByClassName('wrapper')
+        wrap[0].style.color = 'black'
+        startButton.style.color = 'black'
+        resetButton.style.color = 'black'
+    }
+
+    const end = () => {
+        stop()
+        setSignal()
+    }
+
+    const start = () => {
+        if (isCountdownOn) { stop() }
+        else {
+            removeSignal()
+            removeArrowListeners()
+            countdownInterval = setInterval(() => { isCountdownEmpty() ? end() : countdown(0) }, 11)
+            startButton.innerText = 'STOP'
+            isCountdownOn = true
         }
     }
-    return true
-}
 
-function increase(type, max, length) {
-    let value = getNumberValue(type)
-    setNumberValue(type, getFormattedValue(value === max ? `0` : `${value + 1}`, length))
-}
-
-function decrease(type, max, length, step = 1) {
-    let value = getNumberValue(type)
-    if (value === 0) {
-        setNumberValue(type, getFormattedValue(`${max - step + 1}`, length))
-    } else if (value <= step) {
-        setNumberValue(type, getFormattedValue("0", length))
-    } else {
-        setNumberValue(type, getFormattedValue(`${value - step}`, length))
+    const countdown = c => {
+        let step = c ? 1 : 11
+        decrease(times[c].type, times[c].size, times[c].max, step)
+        getNumberValue(times[c].type) === times[c].size - step + 1 && c + 1 < times.length ? countdown(c + 1) : null
     }
-}
 
-function setArrowListeners(type, max, length) {
-    let upArrow = document.getElementById(type).getElementsByClassName('up')[0]
-    let downArrow = document.getElementById(type).getElementsByClassName('down')[0]
-    const onIncrease = () => { increase(type, max, length) }
-    const onDecrease = () => { decrease(type, max, length) }
-    const onStart = (callback) => {
-        removeBlinking()
-        lastValue = getNumberValue(type)
-        onMouseDownInterval = setInterval(callback, 100)
+    const reset = () => {
+        if (isCountdownOn) { stop() }
+        times.forEach((e) => { setNumberValue(e.type, getFormattedValue("0", e.max)) })
+        removeSignal()
     }
-    arrowListeners.push([upArrow, 'mousedown', () => { onStart(onIncrease) }])
-    arrowListeners.push([downArrow, 'mousedown', () => { onStart(onDecrease) }])
-    arrowListeners.slice(-6).map((listener) => {
-        listener[0].addEventListener(listener[1], listener[2])
-    })
-}
 
-function addArrowListeners() {
-    chain.map((element) => { setArrowListeners(element[0], element[1], element[2]) })
-}
-
-function removeArrowListeners() {
-    arrowListeners.forEach((listener) => { listener[0].removeEventListener(listener[1], listener[2]) })
-    arrowListeners = []
-}
-
-function stop() {
     addArrowListeners()
-    clearInterval(countdownInterval)
-    startButton.innerText = 'START'
-    isCountdownOn = false
-}
+    resetButton.addEventListener('click', reset)
+    startButton.addEventListener('click', start)
 
-function setBlinking() {
-    [...document.getElementsByClassName('number')].map((number) => { number.style.animationName = 'blinking' })
-}
-
-function removeBlinking() {
-    [...document.getElementsByClassName('number')].map((number) => { number.style.animationName = 'none' })
-}
-
-function end() {
-    stop()
-    setBlinking()
-    console.log("COUNTDOWN ENDED");
-}
-
-function countdown(c) {
-    let step = c ? 1 : 11
-    decrease(chain[c][0], chain[c][1], chain[c][2], step)
-    getNumberValue(chain[c][0]) === chain[c][1] - step + 1 && c + 1 < chain.length ? countdown(c + 1) : null
-}
-
-function reset() {
-    if (isCountdownOn) {
-        stop()
-    }
-    chain.map((element) => { setNumberValue(element[0], getFormattedValue("0", element[2])) })
-    removeBlinking()
-}
-
-function start() {
-    if (isCountdownOn) {
-        stop()
-    } else {
-        removeBlinking()
-        removeArrowListeners()
-        countdownInterval = setInterval(() => { isCountdownEmpty() ? end() : countdown(0) }, 11)
-        startButton.innerText = 'STOP'
-        isCountdownOn = true
-    }
-}
-
-addArrowListeners()
-resetButton.addEventListener('click', reset)
-startButton.addEventListener('click', start)
+})()

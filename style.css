@@ -6,6 +6,10 @@
     box-sizing: border-box;
 }
 
+*::selection {
+    opacity: 0;
+}
+
 body {
     font-family: 'Major Mono Display', monospace;
     width: 100%;
@@ -71,7 +75,6 @@ button {
     border: 4px solid black;
     padding: 16px 32px;
     text-align: center;
-    /*text-decoration: none;*/
     display: inline-block;
     font-size: 50px;
     -webkit-transition-duration: 0.4s;
@@ -92,16 +95,4 @@ img {
     animation-duration: 1s;
     animation-iteration-count: infinite;
     animation-timing-function: linear;
-}
-
-@keyframes blinking {
-    0% {
-        color: black;
-    }
-    50% {
-        color: red;
-    }
-    100% {
-        color: black;
-    }
 }
