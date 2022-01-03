@@ -8,10 +8,6 @@
         {type: 'minutes', size: 59, max: 2}
     ]
 
-    let arrowListeners = []
-    let countdownInterval = null
-    let isCountdownOn = false
-
     const getNumberValue = type => +document.getElementById(`${type}Value`).innerText
     const setNumberValue = (type, value) => { document.getElementById(`${type}Value`).innerText = value }
     const getFormattedValue = (value, length) => {
@@ -34,6 +30,7 @@
         else { setNumberValue(type, getFormattedValue(`${value - step}`, length)) }
     }
 
+    let arrowListeners = []
     const setArrowListeners = (type, max, length) => {
         let lastValue = 0
         let onMouseDownInterval = null
@@ -63,7 +60,6 @@
         arrowListeners.push({ arrow: downArrow, type: 'mousedown', callback: () => { onStart(onDecrease) } })
         arrowListeners.push({ arrow: downArrow, type: 'mouseup', callback: () => { onStop(onDecrease) } })
         arrowListeners.push({ arrow: downArrow, type: 'mouseout', callback: () => { onStop(onDecrease) } })
-
         arrowListeners.forEach(listener => { listener.arrow.addEventListener(listener.type, listener.callback) })
     }
 
@@ -73,12 +69,14 @@
         arrowListeners = []
     }
 
+    let isCountdownOn = false
     const stop = () => {
         addArrowListeners()
         clearInterval(countdownInterval)
         startButton.innerText = 'START'
         isCountdownOn = false
     }
+
     const setSignal = () => {
         const wrap = document.getElementsByClassName('wrapper')
         wrap[0].style.color = 'green'
@@ -97,6 +95,7 @@
         setSignal()
     }
 
+    let countdownInterval = null
     const start = () => {
         if (isCountdownOn) { stop() }
         else {
